@@ -1,0 +1,379 @@
+---
+title: "Strength_Work_Feb_13.Rmd"
+output:
+  html_document: default
+  word_document: default
+date: "2025-02-13"
+---
+
+```{r}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+```{r}
+# Load necessary library
+library(dplyr)
+library(readr)
+
+# Load dataset (update path as needed)
+df <- read_csv("MLAX_Jan.csv")
+
+# Inspect column names to find braking velocity column
+colnames(df)
+
+# Define the peak braking velocity column
+peak_braking_velocity_col <- "Peak Braking Velocity"
+```
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(readr)
+
+# Load dataset (update the path as needed)
+df <- read_csv("MLAX_Jan.csv")
+
+# Define the peak braking velocity column
+peak_braking_velocity_col <- "Peak Braking Velocity"
+
+# Summary statistics BEFORE exclusion
+summary_before <- df %>%
+  summarise(
+    Total_Entries = n(),
+    Mean_Braking_Velocity = mean(get(peak_braking_velocity_col), na.rm = TRUE),
+    Median_Braking_Velocity = median(get(peak_braking_velocity_col), na.rm = TRUE),
+    Min_Braking_Velocity = min(get(peak_braking_velocity_col), na.rm = TRUE),
+    Max_Braking_Velocity = max(get(peak_braking_velocity_col), na.rm = TRUE),
+    SD_Braking_Velocity = sd(get(peak_braking_velocity_col), na.rm = TRUE)
+  )
+
+# Count the number of entries below -1.2 m/s
+below_threshold_1_2 <- df %>%
+  filter(get(peak_braking_velocity_col) < -1.2) %>%
+  summarise(Count_Below_Threshold = n())
+
+# Filter dataset: Exclude values below -1.2 m/s
+df_filtered <- df %>% filter(get(peak_braking_velocity_col) >= -1.2)
+
+# Summary statistics AFTER exclusion
+summary_after <- df_filtered %>%
+  summarise(
+    Remaining_Entries = n(),
+    Mean_Braking_Velocity = mean(get(peak_braking_velocity_col), na.rm = TRUE),
+    Median_Braking_Velocity = median(get(peak_braking_velocity_col), na.rm = TRUE),
+    Min_Braking_Velocity = min(get(peak_braking_velocity_col), na.rm = TRUE),
+    Max_Braking_Velocity = max(get(peak_braking_velocity_col), na.rm = TRUE),
+    SD_Braking_Velocity = sd(get(peak_braking_velocity_col), na.rm = TRUE)
+  )
+
+# Print results
+print("Summary before exclusion:")
+print(summary_before)
+
+print("Entries below -1.2 m/s:")
+print(below_threshold_1_2)
+
+print("Summary after exclusion:")
+print(summary_after)
+
+# OPTIONAL: Histogram to visualize distribution before/after exclusion
+library(ggplot2)
+
+
+
+```
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+# Create a data frame for plotting
+comparison_df <- data.frame(
+  Statistic = c("Mean Braking Velocity", "Median Braking Velocity", 
+                "Min Braking Velocity", "Max Braking Velocity", 
+                "SD Braking Velocity"),
+  Before_Exclusion = c(-1.2268, -1.2247, -1.8996, -0.6871, 0.2266),
+  After_Exclusion = c(-1.0336, -1.0498, -1.1998, -0.6871, 0.1237)
+)
+
+# Convert data to long format for ggplot
+comparison_long <- tidyr::pivot_longer(comparison_df, 
+                                       cols = c(Before_Exclusion, After_Exclusion),
+                                       names_to = "Condition", 
+                                       values_to = "Value")
+
+# Create the bar plot
+ggplot(comparison_long, aes(x = Statistic, y = Value, fill = Condition)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.6) +
+  scale_fill_manual(values = c("Before_Exclusion" = "blue", "After_Exclusion" = "red")) +
+  labs(title = "Comparison of Braking Velocity Statistics Before and After Exclusion (-1.2 m/s)",
+       x = "Statistic",
+       y = "Value") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+
+```
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Define the peak braking velocity column
+peak_braking_velocity_col <- "Peak Braking Velocity"
+
+# Filter dataset (excluding values below -1.2 m/s)
+df_filtered <- df %>% filter(get(peak_braking_velocity_col) >= -1.2)
+
+# Calculate mean values before and after exclusion, handling NA values
+comparison_df <- data.frame(
+  Metric = c("Braking RFD", "Braking Net Impulse", "Peak Propulsive Power"),
+  Before_Exclusion = c(mean(df$`Braking RFD`, na.rm = TRUE),
+                        mean(df$`Braking Net Impulse`, na.rm = TRUE),
+                        mean(df$`Peak Propulsive Power`, na.rm = TRUE)),
+  After_Exclusion = c(mean(df_filtered$`Braking RFD`, na.rm = TRUE),
+                       mean(df_filtered$`Braking Net Impulse`, na.rm = TRUE),
+                       mean(df_filtered$`Peak Propulsive Power`, na.rm = TRUE))
+)
+
+# Drop any NA values that could cause missing bars
+comparison_df <- comparison_df %>% drop_na()
+
+# Convert data to long format for ggplot
+comparison_long <- pivot_longer(comparison_df, 
+                                cols = c(Before_Exclusion, After_Exclusion),
+                                names_to = "Condition", 
+                                values_to = "Value")
+
+# Create the bar plot
+ggplot(comparison_long, aes(x = Metric, y = Value, fill = Condition)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.6) +
+  scale_fill_manual(values = c("Before_Exclusion" = "blue", "After_Exclusion" = "red")) +
+  labs(title = "Comparison of Key Performance Metrics Before and After Exclusion (-1.2 m/s)",
+       x = "Metric",
+       y = "Mean Value") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+
+```
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Define the peak braking velocity column
+peak_braking_velocity_col <- "Peak Braking Velocity"
+
+# Filter dataset (excluding values below -1.2 m/s)
+df_filtered <- df %>% filter(get(peak_braking_velocity_col) >= -1.2)
+
+# Ensure column names match exactly
+colnames(df)
+
+# Handle NA values using `na.rm = TRUE`
+comparison_df <- data.frame(
+  Metric = c("L|R Peak Braking Force", "L|R Avg. Braking Force", 
+             "L|R Braking Impulse Index", "L|R Peak Propulsive Force"),
+  Before_Exclusion = c(mean(df$`L|R Peak Braking Force`, na.rm = TRUE),
+                        mean(df$`L|R Avg. Braking Force`, na.rm = TRUE),
+                        mean(df$`L|R Braking Impulse Index`, na.rm = TRUE),
+                        mean(df$`L|R Peak Propulsive Force`, na.rm = TRUE)),
+  After_Exclusion = c(mean(df_filtered$`L|R Peak Braking Force`, na.rm = TRUE),
+                       mean(df_filtered$`L|R Avg. Braking Force`, na.rm = TRUE),
+                       mean(df_filtered$`L|R Braking Impulse Index`, na.rm = TRUE),
+                       mean(df_filtered$`L|R Peak Propulsive Force`, na.rm = TRUE))
+)
+
+# Convert data to long format for ggplot
+comparison_long <- pivot_longer(comparison_df, 
+                                cols = c(Before_Exclusion, After_Exclusion),
+                                names_to = "Condition", 
+                                values_to = "Value")
+
+# Create the bar plot
+ggplot(comparison_long, aes(x = Metric, y = Value, fill = Condition)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.6) +
+  scale_fill_manual(values = c("Before_Exclusion" = "blue", "After_Exclusion" = "red")) +
+  labs(title = "Comparison of Metrics with the Largest Changes Before and After Exclusion (-1.2 m/s)",
+       x = "Metric",
+       y = "Mean Value") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+
+
+```
+
+### **Interpretation of the Graph**  
+
+- **L|R Peak Braking Force**   
+  - Increased significantly after exclusion, showing that low-intent jumps had much weaker braking force.  
+  - Athletes who showed intent applied far more force when resisting downward movement.  
+
+- **L|R Avg. Braking Force** ️  
+  - Became stronger after exclusion, meaning athletes in low-intent jumps weren’t applying consistent braking force.  
+  - The remaining data represents a more **accurate** picture of engaged efforts.  
+
+- **L|R Braking Impulse Index**  
+  - Increased dramatically, meaning low-intent jumps had much **less force over time**.  
+  - Athletes showing intent were absorbing and redirecting force more effectively.  
+
+- **L|R Peak Propulsive Force**  
+  - Increased slightly, meaning braking velocity impacts propulsive force but **not as much** as braking-related metrics.  
+  - Some athletes still generated good takeoff power despite weak braking force.  
+
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(broom)
+
+# Define the peak braking velocity column
+peak_braking_velocity_col <- "Peak Braking Velocity"
+
+# Filter dataset (excluding values below -1.2 m/s)
+df_filtered <- df %>% filter(get(peak_braking_velocity_col) >= -1.2)
+
+# Add an indicator variable: Before = 0, After = 1
+df_before <- df %>% 
+  select(`L|R Peak Braking Force`, `L|R Avg. Braking Force`, 
+         `L|R Braking Impulse Index`, `L|R Peak Propulsive Force`) %>%
+  mutate(Exclusion = 0)
+
+df_after <- df_filtered %>% 
+  select(`L|R Peak Braking Force`, `L|R Avg. Braking Force`, 
+         `L|R Braking Impulse Index`, `L|R Peak Propulsive Force`) %>%
+  mutate(Exclusion = 1)
+
+# Combine both datasets
+df_combined <- bind_rows(df_before, df_after)
+
+# Function to run regressions and extract results
+run_regression <- function(dependent_var) {
+  model <- lm(get(dependent_var) ~ Exclusion, data = df_combined)
+  return(tidy(model))  # Get summary in a clean format
+}
+
+# Run regressions for each metric
+metrics <- c("L|R Peak Braking Force", "L|R Avg. Braking Force", 
+             "L|R Braking Impulse Index", "L|R Peak Propulsive Force")
+
+# Store results in a list
+regression_results <- lapply(metrics, run_regression)
+
+# Convert list to a dataframe for easy viewing
+regression_summary <- bind_rows(regression_results, .id = "Metric")
+
+# Print results
+print(regression_summary)
+
+```
+
+Significant Changes (p < 0.05):
+
+L|R Avg. Braking Force (p = 0.004) → Exclusion significantly increased average braking force.
+L|R Braking Impulse Index (p = 0.004) → Exclusion significantly increased braking impulse over time.
+
+ Not Significant (p > 0.05):
+
+L|R Peak Braking Force (p = 0.057) → Close, but not statistically significant.
+L|R Peak Propulsive Force (p = 0.088) → No strong evidence of change after exclusion.
+
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Define the new exclusion threshold (-1.0 m/s)
+threshold_1_0 <- -1.0
+peak_braking_velocity_col <- "Peak Braking Velocity"
+
+# Filter dataset (excluding values below -1.0 m/s)
+df_filtered <- df %>% filter(get(peak_braking_velocity_col) >= threshold_1_0)
+
+# Count how many values are excluded vs retained
+excluded_count <- df %>% filter(get(peak_braking_velocity_col) < threshold_1_0) %>% nrow()
+included_count <- nrow(df_filtered)
+
+# Create summary table
+exclusion_summary <- data.frame(
+  Metric = c("Total Entries", "Entries Below -1.0 m/s", "Remaining Entries"),
+  Count = c(nrow(df), excluded_count, included_count)
+)
+
+# Print summary table
+print(exclusion_summary)
+
+# Define the three selected metrics
+selected_metrics <- c("Braking RFD", "Braking Net Impulse", "Peak Propulsive Power")
+
+# Calculate mean values before and after exclusion
+comparison_df <- data.frame(
+  Metric = selected_metrics,
+  Before_Exclusion = c(mean(df$`Braking RFD`, na.rm = TRUE),
+                        mean(df$`Braking Net Impulse`, na.rm = TRUE),
+                        mean(df$`Peak Propulsive Power`, na.rm = TRUE)),
+  After_Exclusion = c(mean(df_filtered$`Braking RFD`, na.rm = TRUE),
+                       mean(df_filtered$`Braking Net Impulse`, na.rm = TRUE),
+                       mean(df_filtered$`Peak Propulsive Power`, na.rm = TRUE))
+)
+
+# Convert to long format for ggplot
+comparison_long <- pivot_longer(comparison_df, 
+                                cols = c(Before_Exclusion, After_Exclusion),
+                                names_to = "Condition", 
+                                values_to = "Value")
+
+# Create the first bar plot (Selected Metrics)
+ggplot(comparison_long, aes(x = Metric, y = Value, fill = Condition)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.6) +
+  scale_fill_manual(values = c("Before_Exclusion" = "blue", "After_Exclusion" = "red")) +
+  labs(title = "Comparison of Key Performance Metrics Before and After Exclusion (-1.0 m/s)",
+       x = "Metric",
+       y = "Mean Value") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+
+# Identify the top 4 metrics that changed the most
+before_means <- df %>% summarise(across(where(is.numeric), mean, na.rm = TRUE))
+after_means <- df_filtered %>% summarise(across(where(is.numeric), mean, na.rm = TRUE))
+
+# Calculate absolute percentage change
+change_percentage <- abs((after_means - before_means) / before_means * 100)
+change_percentage <- pivot_longer(change_percentage, cols = everything(), names_to = "Metric", values_to = "Percentage_Change")
+
+# Get the top 4 changing metrics
+top_4_metrics <- change_percentage %>% arrange(desc(Percentage_Change)) %>% slice(1:4) %>% pull(Metric)
+
+# Calculate means for top 4 metrics
+comparison_top4 <- data.frame(
+  Metric = top_4_metrics,
+  Before_Exclusion = sapply(top_4_metrics, function(m) mean(df[[m]], na.rm = TRUE)),
+  After_Exclusion = sapply(top_4_metrics, function(m) mean(df_filtered[[m]], na.rm = TRUE))
+)
+
+# Convert to long format for ggplot
+comparison_top4_long <- pivot_longer(comparison_top4, 
+                                     cols = c(Before_Exclusion, After_Exclusion),
+                                     names_to = "Condition", 
+                                     values_to = "Value")
+
+# Create the second bar plot (Top 4 Changing Metrics)
+ggplot(comparison_top4_long, aes(x = Metric, y = Value, fill = Condition)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.6) +
+  scale_fill_manual(values = c("Before_Exclusion" = "blue", "After_Exclusion" = "red")) +
+  labs(title = "Comparison of Top 4 Changing Metrics Before and After Exclusion (-1.0 m/s)",
+       x = "Metric",
+       y = "Mean Value") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+
+```
+
+At -1.2 m/s exclusion: You removed 169 entries (everything < -1.2 m/s).
+At -1.0 m/s exclusion: You removed 260 entries (everything < -1.0 m/s).
+
