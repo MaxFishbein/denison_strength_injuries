@@ -1,0 +1,122 @@
+---
+title: "swim_intent_testing"
+format: html
+editor: visual
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(readr)
+library(rmarkdown)
+
+msd_fp <- read_csv("MSD Force Plate CMJ Sep-Oct Coded.csv")
+wsd_fp <- read_csv("WSD Force Plate CMJ Sep-Oct Coded Data 2024.csv")
+```
+
+```{r}
+
+
+# Define the peak braking velocity column
+peak_braking_velocity_col <- "Peak Braking Velocity"
+
+```
+
+```{r}
+# Define the function properly
+filter_threshold <- function(data, threshold) {
+  data %>%
+    filter(get(peak_braking_velocity_col) >= threshold) %>%
+    mutate(Status = paste("Threshold:", threshold))  # Add a label for faceting
+}
+
+# List of thresholds to compare
+thresholds <- c(-1.2, -1.3, -1.4, -1.5)
+
+# Apply function to create datasets for each threshold
+msd_fp_combined <- bind_rows(lapply(thresholds, function(t) filter_threshold(msd_fp, t)))
+
+```
+
+```{r}
+ggplot(msd_fp_combined, aes(x = get(peak_braking_velocity_col))) +
+  geom_histogram(binwidth = 0.1, color = "black", fill = "blue", alpha = 0.7) +
+  facet_wrap(~Status, ncol = 2) +  # Arrange facets neatly
+  labs(title = "Distribution of Peak Braking Velocity Across Thresholds",
+       x = "Peak Braking Velocity (m/s)",
+       y = "Count") +
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(msd_fp_combined, aes(x = Status, y = get(peak_braking_velocity_col), fill = Status)) +
+  geom_boxplot() +
+  labs(title = "Boxplot of Peak Braking Velocity Across Thresholds MSD",
+       x = "Threshold Applied",
+       y = "Peak Braking Velocity (m/s)") +
+  scale_fill_manual(values = c("red", "blue", "green", "purple")) +
+  theme_minimal()
+
+```
+
+```{r}
+msd_fp %>%
+  summarise(Total_Entries = n()) -> total_count
+
+threshold_summary <- msd_fp_combined %>%
+  group_by(Status) %>%
+  summarise(Remaining_Entries = n()) %>%
+  mutate(Percent_Remaining = (Remaining_Entries / total_count$Total_Entries) * 100)
+
+print(threshold_summary)
+
+```
+
+```{r}
+# Define the function properly
+filter_threshold <- function(data, threshold) {
+  data %>%
+    filter(get(peak_braking_velocity_col) >= threshold) %>%
+    mutate(Status = paste("Threshold:", threshold))  # Add a label for faceting
+}
+
+# List of thresholds to compare
+thresholds <- c(-1.2, -1.3, -1.4, -1.5)
+
+# Apply function to create datasets for each threshold
+wsd_fp_combined <- bind_rows(lapply(thresholds, function(t) filter_threshold(wsd_fp, t)))
+```
+
+```{r}
+ggplot(wsd_fp_combined, aes(x = get(peak_braking_velocity_col))) +
+  geom_histogram(binwidth = 0.1, color = "black", fill = "blue", alpha = 0.7) +
+  facet_wrap(~Status, ncol = 2) +  # Arrange facets neatly
+  labs(title = "Distribution of Peak Braking Velocity Across Thresholds WSD",
+       x = "Peak Braking Velocity (m/s)",
+       y = "Count") +
+  theme_minimal()
+```
+
+```{r}
+wsd_fp %>%
+  summarise(Total_Entries = n()) -> total_count
+
+threshold_summary <- wsd_fp_combined %>%
+  group_by(Status) %>%
+  summarise(Remaining_Entries = n()) %>%
+  mutate(Percent_Remaining = (Remaining_Entries / total_count$Total_Entries) * 100)
+
+print(threshold_summary)
+```
+
+```{r}
+ggplot(wsd_fp_combined, aes(x = Status, y = get(peak_braking_velocity_col), fill = Status)) +
+  geom_boxplot() +
+  labs(title = "Boxplot of Peak Braking Velocity Across Thresholds WSD",
+       x = "Threshold Applied",
+       y = "Peak Braking Velocity (m/s)") +
+  scale_fill_manual(values = c("red", "blue", "green", "purple")) +
+  theme_minimal()
+```
