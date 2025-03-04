@@ -1,0 +1,382 @@
+---
+title: 'predicting mRSI (fatigue) with Braking RFD and more?'
+author: "Jordyn Maurer"
+date: "2/11/2025"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+
+## Introduction
+Fencing, BB, WBB, MBB, MLAX, WLAX, Golf (December/January), FB full season CMJ metrics. 
+
+## Data Cleaning 
+
+```{r}
+# updating file path
+setwd("C:/Users/jordy/OneDrive/Documents/Coach_scott/mRSI_BRFD")
+
+# loading in the library
+library(dplyr)
+```
+
+```{r}
+BB = read.csv("BB.csv")
+Fencing = read.csv("Fencing.csv")
+Golf = read.csv("Golf.csv")
+MBB = read.csv("MLAX.csv")
+WBB = read.csv("WBB.csv")
+WLAX = read.csv("WLAX.csv")
+MLAX = read.csv("MLAX.csv")
+FB = read.csv("FB_CMJ_Data.csv")
+```
+
+```{r}
+# selecting only necessary columns and creating a team column for baseball
+BB_clean <- BB %>%
+  select(TestId, Segment, Date, Braking.RFD, mRSI, Braking.Net.Impulse, Peak.Braking.Force, Relative.Propulsive.Impulse, Peak.Braking.Velocity, Peak.Propulsive.Force, Peak.Propulsive.Power, Peak.Braking.Force, Avg..Braking.Power) %>% 
+  mutate(Team = "BB")
+
+# selecting only necessary columns and creating a team column for fencing
+Fencing_clean <- Fencing %>%
+  select(TestId, Segment, Date, Braking.RFD, mRSI, Braking.Net.Impulse, Peak.Braking.Force, Relative.Propulsive.Impulse, Peak.Braking.Velocity, Peak.Propulsive.Force, Peak.Propulsive.Power, Peak.Braking.Force, Avg..Braking.Power) %>% 
+  mutate(Team = "Fencing")
+
+# selecting only necessary columns and creating a team column for golf
+Golf_clean <- Golf %>%
+  select(TestId, Segment, Date, Braking.RFD, mRSI, Braking.Net.Impulse, Peak.Braking.Force, Relative.Propulsive.Impulse, Peak.Braking.Velocity, Peak.Propulsive.Force, Peak.Propulsive.Power, Peak.Braking.Force, Avg..Braking.Power) %>% 
+  mutate(Team = "Golf")
+
+# selecting only necessary columns and creating a team column for men's basketball
+MBB_clean <- MBB %>%
+  select(TestId, Segment, Date, Braking.RFD, mRSI, Braking.Net.Impulse, Peak.Braking.Force, Relative.Propulsive.Impulse, Peak.Braking.Velocity, Peak.Propulsive.Force, Peak.Propulsive.Power, Peak.Braking.Force, Avg..Braking.Power) %>% 
+  mutate(Team = "MBB")
+
+# selecting only necessary columns and creating a team column for women's basketball
+WBB_clean <- WBB %>%
+  select(TestId, Segment, Date, Braking.RFD, mRSI, Braking.Net.Impulse, Peak.Braking.Force, Relative.Propulsive.Impulse, Peak.Braking.Velocity, Peak.Propulsive.Force, Peak.Propulsive.Power, Peak.Braking.Force, Avg..Braking.Power) %>% 
+  mutate(Team = "WBB")
+
+# selecting only necessary columns and creating a team column for WLAX
+WLAX_clean <- WLAX %>%
+  select(TestId, Segment, Date, Braking.RFD, mRSI, Braking.Net.Impulse, Peak.Braking.Force, Relative.Propulsive.Impulse, Peak.Braking.Velocity, Peak.Propulsive.Force, Peak.Propulsive.Power, Peak.Braking.Force, Avg..Braking.Power) %>% 
+  mutate(Team = "WLAX")
+
+# selecting only necessary columns and creating a team column for MLAX
+MLAX_clean <- MLAX %>%
+  select(TestId, Segment, Date, Braking.RFD, mRSI, Braking.Net.Impulse, Peak.Braking.Force, Relative.Propulsive.Impulse, Peak.Braking.Velocity, Peak.Propulsive.Force, Peak.Propulsive.Power, Peak.Braking.Force, Avg..Braking.Power) %>% 
+  mutate(Team = "MLAX")
+
+# selecting only necessary columns and creating a team column for FB
+FB_clean <- FB %>%
+  select(TestId, Segment, Date, Braking.RFD, mRSI, Braking.Net.Impulse, Peak.Braking.Force, Relative.Propulsive.Impulse, Peak.Braking.Velocity, Peak.Propulsive.Force, Peak.Propulsive.Power, Peak.Braking.Force, Avg..Braking.Power) %>% 
+  mutate(Team = "FB")
+```
+
+
+```{r}
+# combining all CSVs into one dataset
+all_teams_data <- bind_rows(BB_clean, Fencing_clean, Golf_clean, MBB_clean, 
+                             WBB_clean, WLAX_clean, MLAX_clean, FB_clean)
+```
+
+```{r}
+# previewing the dataset
+head(all_teams_data)
+summary(all_teams_data)
+```
+
+## Exploratory Analysis of mRSI and Braking RFD
+
+```{r}
+# loading in the library to create visualizations
+library(ggplot2)
+
+# creating an initial scatter plot of Braking RFD and mRSI
+ggplot(all_teams_data, aes(x = Braking.RFD, y = mRSI)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = 'blue') +
+  facet_wrap(~ Team)
+```
+
+From the initial scatter plots, there may be some linear relationship between Braking RFD and mRSI, but there seems to be a lot of variaton. 
+
+```{r}
+# checking the correlation coefficient for all teams
+all_teams_data %>%
+  summarise(correlation = cor(Braking.RFD, mRSI, use = "complete.obs"))
+
+all_teams_data %>%
+  group_by(Team) %>%
+  summarise(correlation = cor(Braking.RFD, mRSI, use = "complete.obs"))
+```
+
+For all teams, the correlation coefficient is about .47, meaning there may not necessarily be any relationship between mRSI and BRFD in the larger data set. After splitting the observations by team, Golf seems to have the highest correlation, with .71 as its coefficient, but it also has the least amount of observations. Football, with the most observations recorded in the data, shows the smallest correlation between mRSI and BRFD. I'm going to create an initial linear regression to see if anything is significant.`
+
+```{r}
+# linear model with all team data
+lm_braking_rfd <- lm(mRSI ~ Braking.RFD, data = all_teams_data)
+
+summary(lm_braking_rfd)
+```
+
+This initial model shows BRFD may be a strong predictor of mRSI. However, the R-Squared value shows that only about 22% of the variation in mRSI can be explained by BRFD. This suggests that while a relationship between the two variables may exist, it's definitely not the only factor influencing mRSI. To see if there are similar results, I'm going to run the regression across teams. 
+
+```{r}
+# BB
+BB_rfd <- lm(mRSI ~ Braking.RFD, data = BB_clean)
+summary(BB_rfd)
+
+# Golf
+Golf_rfd <- lm(mRSI ~ Braking.RFD, data = Golf_clean)
+summary(Golf_rfd)
+
+# FB
+FB_rfd <- lm(mRSI ~ Braking.RFD, data = FB_clean)
+summary(FB_rfd)
+```
+
+Splitting this apart into separate linear models confirmed the findings from the correlation findings. The model for Golf explained the most variation in mRSI while the model for Football showed the model explaining only 13% variation, an extremely low value. There is definitely a relationship between Braking RFD and mRSI, but Braking RFD isn't the only predictor for mRSI. 
+
+## Analyzing mRSI as a model of other metrics as well as Braking RFD
+
+Before I create the model I want to check the behavior of the KPIs to see if some of them should be transformed. 
+
+```{r}
+library(ggplot2)
+
+# Histogram for Braking RFD
+ggplot(all_teams_data, aes(x = Braking.RFD)) +
+  geom_histogram(binwidth = 1000, fill = "maroon", color = "black", alpha = 0.7) +
+  labs(title = "Histogram of Braking RFD", x = "Braking RFD", y = "Frequency") +
+  theme_minimal()
+
+# Histogram for mRSI
+ggplot(all_teams_data, aes(x = mRSI)) +
+  geom_histogram(binwidth = 0.05, fill = "maroon", color = "black", alpha = 0.7) +
+  labs(title = "Histogram of mRSI", x = "mRSI", y = "Frequency") +
+  theme_minimal()
+
+# Histogram for Peak Braking Force
+ggplot(all_teams_data, aes(x = Peak.Braking.Force)) +
+  geom_histogram(binwidth = 50, fill = "maroon", color = "black", alpha = 0.7) +
+  labs(title = "Histogram of Peak Braking Force", x = "Peak Braking Force", y = "Frequency") +
+  theme_minimal()
+
+# Histogram for Relative Propulsive Impulse
+ggplot(all_teams_data, aes(x = Relative.Propulsive.Impulse)) +
+  geom_histogram(binwidth = 0.1, fill = "maroon", color = "black", alpha = 0.7) +
+  labs(title = "Histogram of Relative Propulsive Impulse", x = "Relative Propulsive Impulse", y = "Frequency") +
+  theme_minimal()
+
+# Histogram for Peak Braking Velocity
+ggplot(all_teams_data, aes(x = Peak.Braking.Velocity)) +
+  geom_histogram(binwidth = 0.1, fill = "maroon", color = "black", alpha = 0.7) +
+  labs(title = "Histogram of Peak Braking Velocity", x = "Peak Braking Velocity", y = "Frequency") +
+  theme_minimal()
+
+# Histogram for Peak Propulsive Force
+ggplot(all_teams_data, aes(x = Peak.Propulsive.Force)) +
+  geom_histogram(binwidth = 50, fill = "maroon", color = "black", alpha = 0.7) +
+  labs(title = "Histogram of Peak Propulsive Force", x = "Peak Propulsive Force", y = "Frequency") +
+  theme_minimal()
+
+# Histogram for Avg. Braking Power
+ggplot(all_teams_data, aes(x = Avg..Braking.Power)) +
+  geom_histogram(binwidth = 50, fill = "maroon", color = "black", alpha = 0.7) +
+  labs(title = "Histogram of Average Braking Power", x = "Average Braking Power", y = "Frequency") +
+  theme_minimal()
+
+```
+
+
+```{r}
+# finding the best model for mRSI
+numeric_data <- all_teams_data %>%
+  select_if(is.numeric)
+head(numeric_data)
+
+library(leaps) 
+
+# forward stepwise selection
+regfit.fwd <- regsubsets(mRSI ~ ., data = numeric_data, nvmax = 9, method = "forward")
+
+# backward stepwise selection
+regfit.bwd <- regsubsets(mRSI ~ ., data = numeric_data, nvmax = 9, method = "backward")
+```
+
+```{r}
+# Forward Selection Summary
+fwd.summary <- summary(regfit.fwd)
+
+# RSS
+plot(fwd.summary$rss, xlab = "Number of Variables", ylab = "RSS", type = "l", main = "Optimal Number of Variables Based on RSS with Forward Selection", cex.main = 0.75)
+which.min(fwd.summary$rss)
+points(which.min(fwd.summary$rss), min(fwd.summary$rss), col = "red", cex = 2, pch = 20)
+
+# adjusted Rsq
+plot(fwd.summary$adjr2, xlab = "Number of Variables", ylab = "Adjusted RSq", type = "l", main = "Optimal Number of Variables Based on Adjusted R-Squared with Forward Selection", cex.main = 0.75)
+which.max(fwd.summary$adjr2)
+points(which.max(fwd.summary$adjr2), max(fwd.summary$adjr2), col = "red", cex = 2, pch = 20)
+
+# BIC 
+plot(fwd.summary$bic, xlab = "Number of Variables", ylab = "BIC", type = "l", main = "Optimal Number of Variables Based on BIC with Forward Selection", cex.main = 0.8)
+which.min(fwd.summary$bic)
+points(which.min(fwd.summary$bic), min(fwd.summary$bic), col = "red", cex = 2, pch = 20)
+
+# Mallows' Cp
+plot(fwd.summary$cp, xlab = "Number of Variables", ylab = "Mallows' Cp", type = "l", main = "Optimal Number of Variables Based on Mallows' Cp with Forward Selection", cex.main = 0.8)
+which.min(fwd.summary$cp)
+points(which.min(fwd.summary$cp), min(fwd.summary$cp), col = "red", cex = 2, pch = 20)
+```
+
+```{r}
+# running a model with all variables
+lm_all <- lm(mRSI ~ ., data = numeric_data)
+summary(lm_all)
+```
+
+```{r}
+# checking for multicollinearity
+library(car)
+vif(lm_all)
+```
+
+As expected, a lot of these variables are correlated. So, even though they may be strong predictors of mRSI, their multicollinearity may inflate the model. So, we'll have to continue with different methods to best predict mRSI.
+
+
+## Checking Predictive Power of BRFD and Injuries (Football)
+```{r}
+# reading in the injury reports
+aug_inj = read.csv("Injury Report August.csv")
+sep_inj = read.csv("Injury Report September.csv")
+oct_inj = read.csv("October Injury Report.csv")
+nov_inj = read.csv("November Inj.csv")
+
+# filtering and cleaning each dataset
+## august
+aug_inj_fb <- aug_inj %>%
+  filter(Organizations == "Football") %>%
+  select(-Teams, -ProblemReportedBy, -IncidentReportCreatedBy)
+
+head(aug_inj_fb)
+
+## september
+sep_inj_fb <- sep_inj %>%
+  filter(Organizations == "Football") %>%
+  select(-Teams, -ProblemReportedBy, -IncidentReportCreatedBy) %>%
+  rename(ID = X)
+
+head(sep_inj_fb)
+
+## october 
+oct_inj_fb <- oct_inj %>%
+  filter(Organizations == "Football") %>%
+  select(-Teams, -ProblemReportedBy, -IncidentReportCreatedBy)
+
+head(oct_inj_fb)
+
+## november 
+nov_inj_fb <- nov_inj %>%
+  filter(Organizations == "Football") %>%
+  select(-ProblemReportedBy, -IncidentReportCreatedBy) %>%
+  rename(ID = Teams)
+
+head(nov_inj_fb)
+```
+
+```{r}
+# joining the four months of injuries into one data frame 
+combined_fb_inj <- bind_rows(aug_inj_fb, sep_inj_fb, oct_inj_fb, nov_inj_fb) 
+head(combined_fb_inj)
+
+# seeing the unique IDs
+unique_ID_count <- combined_fb_inj %>%
+  summarise(unique_count = n_distinct(ID))
+print(unique_ID_count)
+
+unique_ID <- combined_fb_inj %>%
+  distinct(ID)
+print(unique_ID)
+```
+
+```{r}
+# joining the force plate data and the injury data
+merged_fb <- combined_fb_inj %>%
+  left_join(FB_clean, by = c("ID" = "Segment"))
+
+head(merged_fb)
+```
+
+```{r}
+# identifying the types of injuries to filter
+types_of_injuries <- merged_fb %>%
+  distinct(InjuryType)
+print(types_of_injuries)
+```
+
+```{r}
+# removing concussions and fractures from the data 
+merged_fb <- merged_fb %>%
+  filter(InjuryType != "Concussion") %>%
+  filter(InjuryType != "Fracture") %>%
+  filter(InjuryType != "Glenoid Labrum Tear (SLAP)")
+
+# counting the new amount of unique IDs
+new_unique_ID_count <- merged_fb %>%
+  summarise(unique_count = n_distinct(ID))
+print(new_unique_ID_count)
+
+new_unique_ID <- merged_fb %>%
+  distinct(ID)
+print(new_unique_ID)
+```
+
+```{r}
+# visualizing BRFD over time for these injured FB players
+library(ggplot2)
+
+str(merged_fb$Date)
+merged_fb$Date <- as.Date(merged_fb$Date, format = "%m/%d/%Y")
+```
+
+
+```{r}
+# Filter data for each injury type
+sprain_data <- merged_fb %>% filter(InjuryType == "Sprain")
+strain_data <- merged_fb %>% filter(InjuryType == "Strain")
+meniscus_data <- merged_fb %>% filter(InjuryType == "Meniscus Tear")
+
+# Plot each injury type separately
+# Sprain
+ggplot(sprain_data, aes(x = Date, y = Braking.RFD, color = as.factor(ID), group = ID)) +
+  geom_line() +
+  labs(title = "Braking RFD Over Time for Sprain", x = "Date", y = "Braking RFD", color = "ID") +
+  theme_minimal() +
+  scale_x_date(date_labels = "%Y-%m-%d")
+
+# Strain
+ggplot(strain_data, aes(x = Date, y = Braking.RFD, color = as.factor(ID), group = ID)) +
+  geom_line() +
+  labs(title = "Braking RFD Over Time for Strain", x = "Date", y = "Braking RFD", color = "ID") +
+  theme_minimal() +
+  scale_x_date(date_labels = "%Y-%m-%d")
+
+# Meniscus Tear
+ggplot(meniscus_data, aes(x = Date, y = Braking.RFD, color = as.factor(ID), group = ID)) +
+  geom_line() +
+  labs(title = "Braking RFD Over Time for Meniscus Tear", x = "Date", y = "Braking RFD", color = "ID") +
+  theme_minimal() +
+  scale_x_date(date_labels = "%Y-%m-%d")
+```
+
+## NEXT STEP: Add a marker for problem date
+
+
