@@ -347,7 +347,6 @@ str(merged_fb$Date)
 merged_fb$Date <- as.Date(merged_fb$Date, format = "%m/%d/%Y")
 ```
 
-
 ```{r}
 # Filter data for each injury type
 sprain_data <- merged_fb %>% filter(InjuryType == "Sprain")
@@ -377,6 +376,111 @@ ggplot(meniscus_data, aes(x = Date, y = Braking.RFD, color = as.factor(ID), grou
   scale_x_date(date_labels = "%Y-%m-%d")
 ```
 
-## NEXT STEP: Add a marker for problem date
+## Adding a Marker for Problem Date
+
+```{r}
+# changing the format of "ProblemDate"
+library(lubridate)
+sprain_data$ProblemDate <- mdy(substr(sprain_data$ProblemDate, 5, 15))
+strain_data$ProblemDate <- mdy(substr(strain_data$ProblemDate, 5, 15))
+meniscus_data$ProblemDate <- mdy(substr(meniscus_data$ProblemDate, 5, 15))
+```
+
+```{r}
+unique_ids <- unique(sprain_data$ID)
+
+set.seed(123)
+group1_ids <- sample(unique_ids, size = length(unique_ids) / 2)
+group2_ids <- setdiff(unique_ids, group1_ids)
+
+sprain_group1 <- sprain_data %>% filter(ID %in% group1_ids)
+sprain_group2 <- sprain_data %>% filter(ID %in% group2_ids)
+```
 
 
+```{r}
+max_problem_date <- max(as.Date(sprain_data$ProblemDate))
+
+ggplot(sprain_group1, aes(x = Date, y = Braking.RFD, color = as.factor(ID), group = ID)) +
+  geom_line() +
+  geom_vline(aes(xintercept = as.Date(ProblemDate), color = as.factor(ID)), linetype = "dashed") +
+  labs(title = "Braking RFD Over Time for Sprain (Group 1)", x = "Date", y = "Braking RFD", color = "ID") +
+  theme_minimal() +
+  scale_x_date(date_labels = "%Y-%m-%d", limits = c(min(sprain_data$Date), max_problem_date)) +
+   theme(plot.title = element_text(size = 10))
+
+
+ggplot(sprain_group2, aes(x = Date, y = Braking.RFD, color = as.factor(ID), group = ID)) +
+  geom_line() +
+  geom_vline(aes(xintercept = as.Date(ProblemDate), color = as.factor(ID)), linetype = "dashed") +
+  labs(title = "Braking RFD Over Time for Sprain (Group 2)", x = "Date", y = "Braking RFD", color = "ID") +
+  theme_minimal() +
+  scale_x_date(date_labels = "%Y-%m-%d", limits = c(min(sprain_data$Date), max_problem_date)) +
+  theme(plot.title = element_text(size = 10))
+
+```
+
+```{r}
+max_problem_date_strain <- max(as.Date(strain_data$ProblemDate))
+
+ggplot(strain_data, aes(x = Date, y = Braking.RFD, color = as.factor(ID), group = ID)) +
+  geom_line() +
+  geom_vline(aes(xintercept = as.Date(ProblemDate), color = as.factor(ID)), linetype = "dashed") +
+  labs(title = "Braking RFD Over Time for Strain)", x = "Date", y = "Braking RFD", color = "ID") +
+  theme_minimal() +
+  scale_x_date(date_labels = "%Y-%m-%d", limits = c(min(strain_data$Date), max_problem_date)) +
+  theme(plot.title = element_text(size = 10))
+
+
+max_problem_date_meniscus <- max(as.Date(meniscus_data$ProblemDate))
+
+ggplot(meniscus_data, aes(x = Date, y = Braking.RFD, color = as.factor(ID), group = ID)) +
+  geom_line() +
+  geom_vline(aes(xintercept = as.Date(ProblemDate), color = as.factor(ID)), linetype = "dashed") +
+  labs(title = "Braking RFD Over Time for Meniscus Tear)", x = "Date", y = "Braking RFD", color = "ID") +
+  theme_minimal() +
+  scale_x_date(date_labels = "%Y-%m-%d", limits = c(min(meniscus_data$Date), max_problem_date)) +
+  theme(plot.title = element_text(size = 10))
+```
+
+# For athletes with data before and after a reported injury, is there a statistically difference in BRFD?
+
+```{r}
+# FB134, FB107, FB21 before and after injury
+merged_fb$ProblemDate <- mdy(substr(merged_fb$ProblemDate, 5, 15))
+
+injury_data <- merged_fb %>%
+  filter(ID %in% c("FB134", "FB107", "FB21")) %>%
+  mutate(
+    InjuryStatus = ifelse(Date < ProblemDate, "Pre_Injury", "Post_Injury")
+  )
+
+head(injury_data)
+```
+
+```{r}
+library(tidyr)
+# calculate the average Braking.RFD for each injury status (Pre and Post) per athlete
+injury_data_diff <- injury_data %>%
+  group_by(ID, InjuryStatus) %>%
+  summarise(average_brfd = mean(Braking.RFD, na.rm = TRUE)) %>%
+  spread(key = InjuryStatus, value = average_brfd) %>%
+  mutate(difference = `Post_Injury` - `Pre_Injury`)
+
+# preview the calculated differences
+head(injury_data_diff)
+
+# checking normality
+shapiro_test_result <- shapiro.test(injury_data_diff$difference)
+shapiro_test_result
+```
+
+Normality assumption passes. 
+
+```{r}
+# perform the paired t-test
+t_test_result <- t.test(injury_data_diff$difference, mu = 0)
+t_test_result
+```
+
+Shows no statistically significant difference in pre- and post- injury BRFD in these three athletes. Although FB21 had a pre-injury average BRFD of 8001.012 and post-injury of 4675.390. 
